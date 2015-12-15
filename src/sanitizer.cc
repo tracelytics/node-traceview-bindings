@@ -276,15 +276,15 @@ void Sanitizer::sanitize(const Nan::FunctionCallbackInfo<v8::Value>& info) {
     return Nan::ThrowError("Wrong number of arguments");
   }
 
-  const char* input = *Nan::Utf8String(info[0]);
+  Nan::Utf8String input(info[0]);
 
   int flag = OBOE_SQLSANITIZE_AUTO;
   if (info.Length() == 2) {
     flag = info[1]->Int32Value();
   }
 
-  char* output = strndup(input, strlen(input));
-  oboe_sanitize_sql(output, strlen(input), flag);
+  char* output = strndup(*input, input.length());
+  oboe_sanitize_sql(output, strlen(*input), flag);
   info.GetReturnValue().Set(Nan::New(output).ToLocalChecked());
 }
 

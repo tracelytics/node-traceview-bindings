@@ -75,37 +75,37 @@ NAN_METHOD(Event::addInfo) {
   oboe_event_t* event = &self->event;
 
   // Get key string from arguments and prepare a status variable
-  const char* key = *Nan::Utf8String(info[0]);
+  Nan::Utf8String key(info[0]);
   int status;
 
   // Handle integer values
   if (info[1]->IsBoolean()) {
     bool val = info[1]->BooleanValue();
-    status = oboe_event_add_info_bool(event, key, val);
+    status = oboe_event_add_info_bool(event, *key, val);
 
   // Handle double values
   } else if (info[1]->IsInt32()) {
     int64_t val = info[1]->Int32Value();
-    status = oboe_event_add_info_int64(event, key, val);
+    status = oboe_event_add_info_int64(event, *key, val);
 
   // Handle double values
   } else if (info[1]->IsNumber()) {
     const double val = info[1]->NumberValue();
-    status = oboe_event_add_info_double(event, key, val);
+    status = oboe_event_add_info_double(event, *key, val);
 
   // Handle string values
   } else {
     // Get value string from arguments
     Nan::Utf8String v8_value(info[1]);
-    int length = v8_value.length();
-    char* value = *v8_value;
+    //int length = v8_value.length();
+    //char* value = *v8_value;
 
     // Detect if we should add as binary or a string
     // TODO: Should probably use buffers for binary data...
-    if (memchr(value, '\0', length)) {
-      status = oboe_event_add_info_binary(event, key, value, length);
+    if (memchr(*v8_value, '\0', v8_value.length())) {
+      status = oboe_event_add_info_binary(event, *key, *v8_value, v8_value.length());
     } else {
-      status = oboe_event_add_info(event, key, value);
+      status = oboe_event_add_info(event, *key, *v8_value);
     }
   }
 
@@ -136,10 +136,10 @@ NAN_METHOD(Event::addEdge) {
     status = oboe_event_add_edge(&self->event, &metadata->metadata);
   } else {
     // Get string data from arguments
-    char* val = *Nan::Utf8String(info[0]);
+    Nan::Utf8String val(info[0]);
 
     // Attempt to add edge
-    status = oboe_event_add_edge_fromstr(&self->event, val, strlen(val));
+    status = oboe_event_add_edge_fromstr(&self->event, *val, val.length());
   }
 
   if (status < 0) {
