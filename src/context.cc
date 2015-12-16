@@ -75,9 +75,7 @@ NAN_METHOD(OboeContext::sampleRequest) {
     return Nan::ThrowError("Wrong number of arguments");
   }
 
-  //const char* layer_name = NULL;
-  //const char* in_xtrace = NULL;
-  //const char* in_tv_meta = NULL;
+  // Utf8String disallows re-assignment so we'll store values in std:string.
   std::string layer_name;
   std::string in_xtrace;
   std::string in_tv_meta;
@@ -94,8 +92,6 @@ NAN_METHOD(OboeContext::sampleRequest) {
       return Nan::ThrowTypeError("X-Trace ID must be a string");
     }
     in_xtrace = *Nan::Utf8String(info[1]);
-  //} else {
-  //  in_xtrace = strdup("");
   }
 
   // If the third argument is present, it must be a string
@@ -104,8 +100,6 @@ NAN_METHOD(OboeContext::sampleRequest) {
       return Nan::ThrowTypeError("AppView Web ID must be a string");
     }
     in_tv_meta = *Nan::Utf8String(info[2]);
-  //} else {
-  //  in_tv_meta = strdup("");
   }
 
   int sample_rate = 0;

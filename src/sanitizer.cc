@@ -284,8 +284,9 @@ void Sanitizer::sanitize(const Nan::FunctionCallbackInfo<v8::Value>& info) {
   }
 
   char* output = strndup(*input, input.length());
-  oboe_sanitize_sql(output, strlen(*input), flag);
+  oboe_sanitize_sql(output, input.length(), flag);
   info.GetReturnValue().Set(Nan::New(output).ToLocalChecked());
+  free(output);
 }
 
 // Wrap the C++ object so V8 can understand it
