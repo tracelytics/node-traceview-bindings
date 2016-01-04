@@ -39,10 +39,10 @@ v8::Local<v8::Object> Metadata::NewInstance() {
 
 // Transform a string back into a metadata instance
 NAN_METHOD(Metadata::fromString) {
-  std::string s(*Nan::Utf8String(info[0]));
+  Nan::Utf8String metadata_str(info[0]);
 
   oboe_metadata_t md;
-  int status = oboe_metadata_fromstr(&md, s.data(), s.size());
+  int status = oboe_metadata_fromstr(&md, *metadata_str, metadata_str.length());
   if (status < 0) {
     return Nan::ThrowError("Failed to convert Metadata to string");
   }

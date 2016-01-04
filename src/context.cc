@@ -75,9 +75,10 @@ NAN_METHOD(OboeContext::sampleRequest) {
     return Nan::ThrowError("Wrong number of arguments");
   }
 
-  char* layer_name;
-  char* in_xtrace;
-  char* in_tv_meta;
+  // Utf8String disallows re-assignment so we'll store values in std:string.
+  std::string layer_name;
+  std::string in_xtrace;
+  std::string in_tv_meta;
 
   // The first argument must be a string
   if (!info[0]->IsString()) {
@@ -91,8 +92,6 @@ NAN_METHOD(OboeContext::sampleRequest) {
       return Nan::ThrowTypeError("X-Trace ID must be a string");
     }
     in_xtrace = *Nan::Utf8String(info[1]);
-  } else {
-    in_xtrace = strdup("");
   }
 
   // If the third argument is present, it must be a string
@@ -101,16 +100,14 @@ NAN_METHOD(OboeContext::sampleRequest) {
       return Nan::ThrowTypeError("AppView Web ID must be a string");
     }
     in_tv_meta = *Nan::Utf8String(info[2]);
-  } else {
-    in_tv_meta = strdup("");
   }
 
   int sample_rate = 0;
   int sample_source = 0;
   int rc = oboe_sample_layer(
-    layer_name,
-    in_xtrace,
-    in_tv_meta,
+    layer_name.c_str(),
+    in_xtrace.c_str(),
+    in_tv_meta.c_str(),
     &sample_rate,
     &sample_source
   );
