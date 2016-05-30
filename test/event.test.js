@@ -11,6 +11,26 @@ describe('addon.event', function () {
     event.addInfo('key', 'val')
   })
 
+  if (bindings.Config.checkVersion(2, 0)) {
+    it('should add buffer info', function () {
+      bindings.Context.setTracingMode(bindings.TRACE_ALWAYS)
+      bindings.Context.setDefaultSampleRate(bindings.MAX_SAMPLE_RATE)
+      var check = bindings.Context.sampleRequest('a', 'b', 'c')
+
+      event.addInfo('key', check)
+    })
+
+    it('should not try to add non-buffer objects', function () {
+      var thrown = false
+      try {
+        event.addInfo('key', {})
+      } catch (e) {
+        thrown = true
+      }
+      thrown.should.equal(true)
+    })
+  }
+
   it('should add edge', function () {
     var e = new bindings.Event()
     var meta = e.getMetadata()

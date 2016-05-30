@@ -11,6 +11,62 @@
 
 #include <oboe/oboe.h>
 
+// Helper class for managing app token
+class SettingsContext {
+#ifdef OBOE_SETTINGS_APP_TOKEN_SZ
+  oboe_settings_ctx_t* settings = nullptr;
+  std::string traceData;
+  std::string appToken;
+
+  void regen();
+#else
+  int sampleSource;
+  int sampleRate;
+  int retCode;
+#endif
+
+  std::string layer;
+  int traceMode;
+  bool changed;
+
+  // Singleton
+  static SettingsContext* singleton;
+
+  // Constructor
+#ifdef OBOE_SETTINGS_APP_TOKEN_SZ
+  SettingsContext(int mode) : traceMode(mode), changed(true) {
+    appToken = oboe_get_apptoken();
+  };
+#else
+  SettingsContext(int mode) : traceMode(mode) {};
+#endif
+
+public:
+  static SettingsContext* instance() {
+    if (!singleton) singleton = new SettingsContext(OBOE_TRACE_ALWAYS);
+    return singleton;
+  }
+
+  void setTraceMode(int);
+  void setLayer(std::string);
+  void setLayer(const char*);
+
+  bool sample(std::string&, std::string&, std::string&);
+
+#ifdef OBOE_SETTINGS_APP_TOKEN_SZ
+  void setAppToken(std::string);
+  void setAppToken(const char*);
+  std::string& getAppToken() { return appToken; };
+  std::string& getTraceData() { return traceData; };
+#else
+  int getRetCode() { return retCode; };
+  int getSampleRate() { return sampleRate; };
+  int getSampleSource() { return sampleSource; };
+#endif
+};
+
+SettingsContext* SettingsContext::singleton = 0;
+
 class Event;
 
 class Metadata : public Nan::ObjectWrap {
@@ -58,6 +114,11 @@ class OboeContext {
   static NAN_METHOD(init);
   static NAN_METHOD(createEvent);
   static NAN_METHOD(startTrace);
+
+#ifdef OBOE_SETTINGS_APP_TOKEN_SZ
+  static NAN_GETTER(getAppToken);
+  static NAN_SETTER(setAppToken);
+#endif
 
   public:
     static void Init(v8::Local<v8::Object>);

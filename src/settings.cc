@@ -1,0 +1,87 @@
+void SettingsContext::setTraceMode(int mode) {
+  changed = true;
+  traceMode = mode;
+
+  oboe_settings_cfg_tracing_mode_set(mode);
+}
+
+void SettingsContext::setLayer(std::string name) {
+  changed = true;
+  layer = name;
+}
+void SettingsContext::setLayer(const char* name) {
+  changed = true;
+  layer = std::string(name);
+}
+
+#ifdef OBOE_SETTINGS_APP_TOKEN_SZ
+void SettingsContext::setAppToken(std::string name) {
+  changed = true;
+  appToken = name;
+}
+void SettingsContext::setAppToken(const char* name) {
+  changed = true;
+  appToken = std::string(name);
+}
+
+void SettingsContext::regen() {
+  if (!changed) return;
+  changed = false;
+
+  int flags;
+
+  switch (traceMode) {
+    case OBOE_TRACE_ALWAYS:
+      flags = OBOE_SETTINGS_FLAG_SAMPLE_START | OBOE_SETTINGS_FLAG_SAMPLE_THROUGH_ALWAYS | OBOE_SETTINGS_FLAG_SAMPLE_AVW_ALWAYS;
+      break;
+
+    case OBOE_TRACE_THROUGH:
+      flags = OBOE_SETTINGS_FLAG_SAMPLE_THROUGH_ALWAYS;
+      break;
+
+    case OBOE_TRACE_NEVER:
+    default:
+      flags = 0;
+      break;
+  }
+
+  // Cleanup old settings
+  if (settings != NULL) {
+    oboe_settings_ctx_destroy(settings);
+  }
+
+  settings = oboe_settings_ctx_create(
+    NULL,
+    appToken.c_str(),
+    flags,
+    -1
+  );
+}
+#endif
+
+bool SettingsContext::sample(std::string& xtrace, std::string& url, std::string& meta) {
+#ifdef OBOE_SETTINGS_APP_TOKEN_SZ
+  // Attempt context regeneration before trying to use it
+  regen();
+
+  char retbuf[OBOE_SAMPLE_PARAM_BUFFER_MAX];
+  int retbuflen = OBOE_SAMPLE_PARAM_BUFFER_MAX;
+
+  if (oboe_should_trace(settings, retbuf, &retbuflen, xtrace.c_str(), url.c_str(), meta.c_str())) {
+    traceData = std::string(retbuf, retbuflen);
+    return true;
+  } else {
+    return false;
+  }
+#else
+  retCode = oboe_sample_layer(
+    layer.c_str(),
+    xtrace.c_str(),
+    meta.c_str(),
+    &sampleRate,
+    &sampleSource
+  );
+
+  return retCode == 1;
+#endif
+}

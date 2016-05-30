@@ -1,6 +1,7 @@
 #include "bindings.h"
 
 // Components
+#include "settings.cc"
 #include "sanitizer.cc"
 #include "metadata.cc"
 #include "context.cc"
