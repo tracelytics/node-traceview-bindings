@@ -89,6 +89,7 @@ NAN_METHOD(OboeContext::setDefaultSampleRate) {
  * @param layer Name of the layer being considered for tracing
  * @param in_xtrace Incoming X-Trace ID (NULL or empty string if not present)
  * @param in_tv_meta AppView Web ID from X-TV-Meta HTTP header or higher layer (NULL or empty string if not present).
+ * @param url URL or other identity string to sample with
  * @return Zero to not trace; otherwise return the sample rate used in the low order
  *         bytes 0 to 2 and the sample source in the higher-order byte 3.
  */
@@ -109,7 +110,7 @@ NAN_METHOD(OboeContext::sampleRequest) {
   layer_name = *Nan::Utf8String(info[0]);
 
   // If the second argument is present, it must be a string
-  if (info.Length() >= 2) {
+  if (info.Length() >= 2 && !info[1]->IsNull()) {
     if ( ! info[1]->IsString()) {
       return Nan::ThrowTypeError("X-Trace ID must be a string");
     }
@@ -117,7 +118,7 @@ NAN_METHOD(OboeContext::sampleRequest) {
   }
 
   // If the third argument is present, it must be a string
-  if (info.Length() >= 3) {
+  if (info.Length() >= 3 && !info[2]->IsNull()) {
     if ( ! info[2]->IsString()) {
       return Nan::ThrowTypeError("AppView Web ID must be a string");
     }
@@ -126,8 +127,16 @@ NAN_METHOD(OboeContext::sampleRequest) {
 
   SettingsContext* ctx = SettingsContext::instance();
   ctx->setLayer(layer_name);
-  // TODO: Provide real URL
+
+  // If the URL argument is present, it must be a string
   std::string url = std::string("");
+  if (info.Length() >= 4 && !info[3]->IsNull()) {
+    if ( ! info[3]->IsString()) {
+      return Nan::ThrowTypeError("URL/Identity must be a string");
+    }
+    url = *Nan::Utf8String(info[3]);
+  }
+
   ctx->sample(in_xtrace, url, in_tv_meta);
 
   std::string td = ctx->getTraceData();
