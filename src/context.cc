@@ -1,5 +1,10 @@
 #include "bindings.h"
 
+NAN_SETTER(OboeContext::setDefaultAppToken) {}
+NAN_GETTER(OboeContext::getDefaultAppToken) {
+  info.GetReturnValue().Set(Nan::New(oboe_get_apptoken()).ToLocalChecked());
+}
+
 NAN_GETTER(OboeContext::getAppToken) {
   info.GetReturnValue().Set(Nan::New(
     SettingsContext::instance()->getAppToken()
@@ -231,6 +236,12 @@ void OboeContext::Init(v8::Local<v8::Object> module) {
     Nan::New("appToken").ToLocalChecked(),
     OboeContext::getAppToken,
     OboeContext::setAppToken
+  );
+  Nan::SetAccessor(
+    exports,
+    Nan::New("defaultAppToken").ToLocalChecked(),
+    OboeContext::getDefaultAppToken,
+    OboeContext::setDefaultAppToken
   );
 
   Nan::Set(module, Nan::New("Context").ToLocalChecked(), exports);

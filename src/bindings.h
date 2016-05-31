@@ -112,6 +112,8 @@ class OboeContext {
 
   static NAN_GETTER(getAppToken);
   static NAN_SETTER(setAppToken);
+  static NAN_GETTER(getDefaultAppToken);
+  static NAN_SETTER(setDefaultAppToken);
 
   public:
     static void Init(v8::Local<v8::Object>);
