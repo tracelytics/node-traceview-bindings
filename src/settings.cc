@@ -14,7 +14,6 @@ void SettingsContext::setLayer(const char* name) {
   layer = std::string(name);
 }
 
-#ifdef OBOE_SETTINGS_APP_TOKEN_SZ
 void SettingsContext::setAppToken(std::string name) {
   changed = true;
   appToken = name;
@@ -57,10 +56,8 @@ void SettingsContext::regen() {
     -1
   );
 }
-#endif
 
 bool SettingsContext::sample(std::string& xtrace, std::string& url, std::string& meta) {
-#ifdef OBOE_SETTINGS_APP_TOKEN_SZ
   // Attempt context regeneration before trying to use it
   regen();
 
@@ -73,15 +70,4 @@ bool SettingsContext::sample(std::string& xtrace, std::string& url, std::string&
   } else {
     return false;
   }
-#else
-  retCode = oboe_sample_layer(
-    layer.c_str(),
-    xtrace.c_str(),
-    meta.c_str(),
-    &sampleRate,
-    &sampleSource
-  );
-
-  return retCode == 1;
-#endif
 }
