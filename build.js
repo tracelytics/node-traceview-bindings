@@ -33,7 +33,7 @@ function build (cb) {
     }
 
     if (err) {
-      console.warn('TraceView oboe library not found, tracing disabled')
+      console.warn('No compatible TraceView oboe library found, tracing disabled')
     } else {
       console.log('TraceView bindings built successfully')
     }
