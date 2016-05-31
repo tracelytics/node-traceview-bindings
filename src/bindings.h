@@ -17,6 +17,7 @@ class SettingsContext {
   std::string traceData;
   std::string appToken;
   std::string layer;
+  int sampleRate;
   int traceMode;
   bool changed;
 
@@ -24,7 +25,11 @@ class SettingsContext {
   static SettingsContext* singleton;
 
   // Constructor
-  SettingsContext(int mode) : traceMode(mode), changed(true) {
+  SettingsContext(int mode, int rate)
+    : sampleRate(rate)
+    , traceMode(mode)
+    , changed(true)
+  {
     appToken = oboe_get_apptoken();
   };
 
@@ -32,19 +37,24 @@ class SettingsContext {
 
 public:
   static SettingsContext* instance() {
-    if (!singleton) singleton = new SettingsContext(OBOE_TRACE_ALWAYS);
+    if (!singleton) singleton = new SettingsContext(OBOE_TRACE_ALWAYS, -1);
     return singleton;
   }
 
   void setTraceMode(int);
+  int getTraceMode() { return traceMode; };
+
+  void setSampleRate(int);
+  int getSampleRate() { return sampleRate; };
+
   void setLayer(std::string);
   void setLayer(const char*);
+  std::string& getLayer() { return layer; };
+
   void setAppToken(std::string);
   void setAppToken(const char*);
-
-  int getTraceMode() { return traceMode; };
-  std::string& getLayer() { return layer; };
   std::string& getAppToken() { return appToken; };
+
   std::string& getTraceData() { return traceData; };
 
   bool sample(std::string&, std::string&, std::string&);

@@ -71,7 +71,8 @@ NAN_METHOD(OboeContext::setDefaultSampleRate) {
     return Nan::ThrowRangeError("Sample rate out of range");
   }
 
-  oboe_settings_cfg_sample_rate_set(rate);
+  // Set trace mode on settings context
+  SettingsContext::instance()->setSampleRate(rate);
 }
 
 /**

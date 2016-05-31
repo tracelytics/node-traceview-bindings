@@ -1,8 +1,13 @@
 void SettingsContext::setTraceMode(int mode) {
   changed = true;
   traceMode = mode;
-
   oboe_settings_cfg_tracing_mode_set(mode);
+}
+
+void SettingsContext::setSampleRate(int rate) {
+  changed = true;
+  sampleRate = rate;
+  oboe_settings_cfg_sample_rate_set(rate);
 }
 
 void SettingsContext::setLayer(std::string name) {
@@ -50,10 +55,10 @@ void SettingsContext::regen() {
   }
 
   settings = oboe_settings_ctx_create(
-    NULL,
+    layer.c_str(),
     appToken.c_str(),
     flags,
-    -1
+    sampleRate
   );
 }
 
