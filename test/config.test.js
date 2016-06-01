@@ -1,6 +1,6 @@
 var bindings = require('../')
 
-describe('addon.config', function () {
+describe('config', function () {
   var version
   var revision
 
