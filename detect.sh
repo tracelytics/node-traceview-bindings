@@ -3,8 +3,7 @@
 #
 # Define expectations
 #
-EXPECTED_BUILD_TOOL_NAME="gcc"
-EXPECTED_BUILD_TOOL_VERSION="4.8"
+EXPECTED_GCC_VERSION="4.8"
 EXPECTED_LIBOBOE_VERSION="2.0"
 
 
@@ -21,15 +20,14 @@ semver() {
 #
 # Detect build tool presence and version
 #
-if ! type $EXPECTED_BUILD_TOOL_NAME > /dev/null; then
-  echo "No $EXPECTED_BUILD_TOOL_NAME installed."
+if ! type gcc &> /dev/null; then
+  echo "Unable to locate gcc."
   EXIT_CODE=1
 else
-  # NOTE: This is incorrect with clang
-  FOUND_BUILD_TOOL_VERSION=$($EXPECTED_BUILD_TOOL_NAME -dumpversion)
+  FOUND_GCC_VERSION=$(gcc -dumpversion)
 
-  if semver $EXPECTED_BUILD_TOOL_VERSION $FOUND_BUILD_TOOL_VERSION; then
-    echo "Expected $EXPECTED_BUILD_TOOL_NAME $EXPECTED_BUILD_TOOL_VERSION+, found $FOUND_BUILD_TOOL_VERSION!"
+  if semver $EXPECTED_GCC_VERSION $FOUND_GCC_VERSION; then
+    echo "Expected gcc $EXPECTED_GCC_VERSION+, found $FOUND_GCC_VERSION."
     EXIT_CODE=1
   fi
 fi
@@ -38,9 +36,9 @@ fi
 #
 # Detect liboboe presence and version
 #
-OUTPUT=$(ldconfig -p | grep liboboe &> /dev/null)
+OUTPUT=$(ldconfig -p 2> /dev/null | grep liboboe 2> /dev/null)
 if [ -z "$OUTPUT" ]; then
-  echo "No liboboe installed."
+  echo "Unable to locate liboboe."
   EXIT_CODE=1
 else
   # NOTE: Can't use ldconfig output for version detection,
@@ -58,7 +56,7 @@ EOM
   rm /tmp/test-version.c /tmp/test-version
 
   if semver $EXPECTED_LIBOBOE_VERSION $FOUND_LIBOBOE_VERSION; then
-    echo "Expected liboboe $EXPECTED_LIBOBOE_VERSION+, found $FOUND_LIBOBOE_VERSION!"
+    echo "Expected liboboe $EXPECTED_LIBOBOE_VERSION+, found $FOUND_LIBOBOE_VERSION."
     EXIT_CODE=1
   fi
 fi
