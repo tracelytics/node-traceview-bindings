@@ -1,83 +1,25 @@
 #include "bindings.h"
 
+Nan::Persistent<v8::Function> OboeContext::constructor;
+
+OboeContext::OboeContext(
+  const std::string& layer,
+  const std::string& token,
+  int flags,
+  int sampleRate
+) : settings(const_cast<oboe_settings_ctx_t*>(
+  oboe_settings_ctx_create(layer.c_str(), token.c_str(), flags, sampleRate)
+)) {}
+
+OboeContext::~OboeContext() {
+  // if (settings != NULL) {
+  //   oboe_settings_ctx_destroy(settings);
+  // }
+}
+
 NAN_SETTER(OboeContext::setDefaultAppToken) {}
 NAN_GETTER(OboeContext::getDefaultAppToken) {
   info.GetReturnValue().Set(Nan::New(oboe_get_apptoken()).ToLocalChecked());
-}
-
-NAN_GETTER(OboeContext::getAppToken) {
-  info.GetReturnValue().Set(Nan::New(
-    SettingsContext::instance()->getAppToken()
-  ).ToLocalChecked());
-}
-
-NAN_SETTER(OboeContext::setAppToken) {
-  if (!value->IsString()) {
-    return Nan::ThrowTypeError("App token must be a string");
-  }
-
-  Nan::Utf8String utf8_value(value);
-  if (strlen(*utf8_value) != 32) {
-    return Nan::ThrowTypeError("App token must be a 32 characters long");
-  }
-
-  SettingsContext::instance()->setAppToken(*utf8_value);
-
-  info.GetReturnValue().Set(Nan::Undefined());
-}
-
-/**
- * Set the tracing mode.
- *
- * @param newMode One of
- * - OBOE_TRACE_NEVER(0) to disable tracing,
- * - OBOE_TRACE_ALWAYS(1) to start a new trace if needed, or
- * - OBOE_TRACE_THROUGH(2) to only add to an existing trace.
- */
-NAN_METHOD(OboeContext::setTracingMode) {
-  // Validate arguments
-  if (info.Length() != 1) {
-    return Nan::ThrowError("Wrong number of arguments");
-  }
-  if (!info[0]->IsNumber()) {
-    return Nan::ThrowTypeError("Tracing mode must be a number");
-  }
-
-  int mode = info[0]->NumberValue();
-  if (mode < 0 || mode > 2) {
-    return Nan::ThrowRangeError("Invalid tracing mode");
-  }
-
-  // Set trace mode on settings context
-  SettingsContext::instance()->setTraceMode(mode);
-}
-
-/**
- * Set the default sample rate.
- *
- * This rate is used until overridden by the TraceView servers.  If not set then the
- * value 300,000 will be used (ie. 30%).
- *
- * The rate is interpreted as a ratio out of OBOE_SAMPLE_RESOLUTION (currently 1,000,000).
- *
- * @param newRate A number between 0 (none) and OBOE_SAMPLE_RESOLUTION (a million)
- */
-NAN_METHOD(OboeContext::setDefaultSampleRate) {
-  // Validate arguments
-  if (info.Length() != 1) {
-    return Nan::ThrowError("Wrong number of arguments");
-  }
-  if (!info[0]->IsNumber()) {
-    return Nan::ThrowTypeError("Sample rate must be a number");
-  }
-
-  int rate = info[0]->NumberValue();
-  if (rate < 1 || rate > OBOE_SAMPLE_RESOLUTION) {
-    return Nan::ThrowRangeError("Sample rate out of range");
-  }
-
-  // Set trace mode on settings context
-  SettingsContext::instance()->setSampleRate(rate);
 }
 
 /**
@@ -98,55 +40,51 @@ NAN_METHOD(OboeContext::setDefaultSampleRate) {
  * @return Zero to not trace; otherwise return the sample rate used in the low order
  *         bytes 0 to 2 and the sample source in the higher-order byte 3.
  */
-NAN_METHOD(OboeContext::sampleRequest) {
-  // Validate arguments
-  if (info.Length() < 1) {
-    return Nan::ThrowError("Wrong number of arguments");
-  }
-
-  std::string layer_name;
+NAN_METHOD(OboeContext::shouldSample) {
   std::string in_xtrace;
   std::string in_tv_meta;
 
-  // The first argument must be a string
-  if (!info[0]->IsString()) {
-    return Nan::ThrowTypeError("Layer name must be a string");
-  }
-  layer_name = *Nan::Utf8String(info[0]);
-
   // If the second argument is present, it must be a string
-  if (info.Length() >= 2 && !info[1]->IsNull()) {
-    if ( ! info[1]->IsString()) {
+  if (info.Length() >= 1 && !info[0]->IsNull()) {
+    if (!info[0]->IsString()) {
       return Nan::ThrowTypeError("X-Trace ID must be a string");
     }
-    in_xtrace = *Nan::Utf8String(info[1]);
+    in_xtrace = *Nan::Utf8String(info[0]);
   }
 
   // If the third argument is present, it must be a string
-  if (info.Length() >= 3 && !info[2]->IsNull()) {
-    if ( ! info[2]->IsString()) {
+  if (info.Length() >= 2 && !info[1]->IsNull()) {
+    if (!info[1]->IsString()) {
       return Nan::ThrowTypeError("AppView Web ID must be a string");
     }
-    in_tv_meta = *Nan::Utf8String(info[2]);
+    in_tv_meta = *Nan::Utf8String(info[1]);
   }
-
-  SettingsContext* ctx = SettingsContext::instance();
-  ctx->setLayer(layer_name);
 
   // If the URL argument is present, it must be a string
   std::string url = std::string("");
-  if (info.Length() >= 4 && !info[3]->IsNull()) {
-    if ( ! info[3]->IsString()) {
+  if (info.Length() >= 3 && !info[2]->IsNull()) {
+    if (!info[2]->IsString()) {
       return Nan::ThrowTypeError("URL/Identity must be a string");
     }
-    url = *Nan::Utf8String(info[3]);
+    url = *Nan::Utf8String(info[2]);
   }
 
-  ctx->sample(in_xtrace, url, in_tv_meta);
+  char retbuf[OBOE_SAMPLE_PARAM_BUFFER_MAX];
+  int retbuflen = OBOE_SAMPLE_PARAM_BUFFER_MAX;
 
-  std::string td = ctx->getTraceData();
+  OboeContext* self = ObjectWrap::Unwrap<OboeContext>(info.This());
+
+  oboe_should_trace(
+    self->settings,
+    retbuf,
+    &retbuflen,
+    in_xtrace.c_str(),
+    url.c_str(),
+    in_tv_meta.c_str()
+  );
+
   info.GetReturnValue().Set(
-    Nan::CopyBuffer(td.data(), td.size()).ToLocalChecked()
+    Nan::CopyBuffer(retbuf, retbuflen).ToLocalChecked()
   );
 }
 
@@ -215,34 +153,97 @@ NAN_METHOD(OboeContext::startTrace) {
   info.GetReturnValue().Set(Event::NewInstance());
 }
 
+// Creates a new Javascript instance
+NAN_METHOD(OboeContext::New) {
+  if (!info.IsConstructCall()) {
+    return Nan::ThrowError("Context() must be called as a constructor");
+  }
+  if (info.Length() < 1 || !info[0]->IsString()) {
+    return Nan::ThrowError("Context() must be given a layer name");
+  }
+  std::string layer = *Nan::Utf8String(info[0]);
+
+  std::string token;
+  if (info.Length() < 2) {
+    if (info[1]->IsString()) {
+      token = *Nan::Utf8String(info[1]);
+      if (token.length() != 32) {
+        return Nan::ThrowTypeError("App token must be 32 characters long");
+      }
+    } else if (info[1]->IsNull()) {
+      token = std::string(oboe_get_apptoken());
+    } else {
+      return Nan::ThrowError("Context() must be given an app token or null");
+    }
+  }
+
+  // Can supply numeric flags or trace mode name strings
+  int flags = 0;
+  if (info.Length() >= 3 && !info[2]->IsNull()) {
+    if (info[2]->IsInt32()) {
+      flags = info[2]->Int32Value();
+    } else if (info[2]->IsString()) {
+      std::string mode = *Nan::Utf8String(info[2]);
+      if (mode.compare("always") == 0) {
+        flags = OBOE_SETTINGS_FLAG_SAMPLE_START
+          | OBOE_SETTINGS_FLAG_SAMPLE_THROUGH_ALWAYS
+          | OBOE_SETTINGS_FLAG_SAMPLE_AVW_ALWAYS;
+      } else if (mode.compare("through") == 0) {
+        flags = OBOE_SETTINGS_FLAG_SAMPLE_THROUGH_ALWAYS;
+      } else if (mode.compare("never") != 0) {
+        return Nan::ThrowError("Invalid trace mode string");
+      }
+    } else {
+      return Nan::ThrowError("Must supply a trace mode string or flags");
+    }
+  }
+
+  int sampleRate = -1;
+  if (info.Length() >= 4 && !info[3]->IsNull()) {
+    if (!info[3]->IsInt32()) {
+      return Nan::ThrowError("Sample rate must be a number");
+    }
+    sampleRate = info[3]->Int32Value();
+  }
+
+  OboeContext* ctx = new OboeContext(
+    layer,
+    token,
+    flags,
+    sampleRate
+  );
+
+  ctx->Wrap(info.This());
+  info.GetReturnValue().Set(info.This());
+}
+
 void OboeContext::Init(v8::Local<v8::Object> module) {
   Nan::HandleScope scope;
 
-  v8::Local<v8::Object> exports = Nan::New<v8::Object>();
-  Nan::SetMethod(exports, "setTracingMode", OboeContext::setTracingMode);
-  Nan::SetMethod(exports, "setDefaultSampleRate", OboeContext::setDefaultSampleRate);
-  Nan::SetMethod(exports, "sampleRequest", OboeContext::sampleRequest);
-  Nan::SetMethod(exports, "toString", OboeContext::toString);
-  Nan::SetMethod(exports, "set", OboeContext::set);
-  Nan::SetMethod(exports, "copy", OboeContext::copy);
-  Nan::SetMethod(exports, "clear", OboeContext::clear);
-  Nan::SetMethod(exports, "isValid", OboeContext::isValid);
-  Nan::SetMethod(exports, "createEvent", OboeContext::createEvent);
-  Nan::SetMethod(exports, "startTrace", OboeContext::startTrace);
+  // Prepare constructor template
+  v8::Local<v8::FunctionTemplate> ctor = Nan::New<v8::FunctionTemplate>(New);
+  ctor->InstanceTemplate()->SetInternalFieldCount(2);
+  ctor->SetClassName(Nan::New("Context").ToLocalChecked());
+
+  Nan::SetMethod(ctor, "toString", OboeContext::toString);
+  Nan::SetMethod(ctor, "set", OboeContext::set);
+  Nan::SetMethod(ctor, "copy", OboeContext::copy);
+  Nan::SetMethod(ctor, "clear", OboeContext::clear);
+  Nan::SetMethod(ctor, "isValid", OboeContext::isValid);
+  Nan::SetMethod(ctor, "createEvent", OboeContext::createEvent);
+  Nan::SetMethod(ctor, "startTrace", OboeContext::startTrace);
+
+  // Set Prototype methods
+  Nan::SetPrototypeMethod(ctor, "shouldSample", OboeContext::shouldSample);
 
   // Provide appToken getter and setter for new liboboe
   Nan::SetAccessor(
-    exports,
-    Nan::New("appToken").ToLocalChecked(),
-    OboeContext::getAppToken,
-    OboeContext::setAppToken
-  );
-  Nan::SetAccessor(
-    exports,
+    static_cast<v8::Local<v8::Object> >(ctor->GetFunction()),
     Nan::New("defaultAppToken").ToLocalChecked(),
     OboeContext::getDefaultAppToken,
     OboeContext::setDefaultAppToken
   );
 
-  Nan::Set(module, Nan::New("Context").ToLocalChecked(), exports);
+  constructor.Reset(ctor->GetFunction());
+  Nan::Set(module, Nan::New("Context").ToLocalChecked(), ctor->GetFunction());
 }

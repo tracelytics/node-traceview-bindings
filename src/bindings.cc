@@ -1,7 +1,6 @@
 #include "bindings.h"
 
 // Components
-#include "settings.cc"
 #include "sanitizer.cc"
 #include "metadata.cc"
 #include "context.cc"
@@ -23,6 +22,11 @@ void init(v8::Local<v8::Object> exports) {
   Nan::Set(exports, Nan::New("TRACE_NEVER").ToLocalChecked(), Nan::New(OBOE_TRACE_NEVER));
   Nan::Set(exports, Nan::New("TRACE_ALWAYS").ToLocalChecked(), Nan::New(OBOE_TRACE_ALWAYS));
   Nan::Set(exports, Nan::New("TRACE_THROUGH").ToLocalChecked(), Nan::New(OBOE_TRACE_THROUGH));
+
+  // liboboe 2.x sample flags
+  Nan::Set(exports, Nan::New("SAMPLE_START").ToLocalChecked(), Nan::New(OBOE_SETTINGS_FLAG_SAMPLE_START));
+  Nan::Set(exports, Nan::New("SAMPLE_THROUGH_ALWAYS").ToLocalChecked(), Nan::New(OBOE_SETTINGS_FLAG_SAMPLE_THROUGH_ALWAYS));
+  Nan::Set(exports, Nan::New("SAMPLE_AVW_ALWAYS").ToLocalChecked(), Nan::New(OBOE_SETTINGS_FLAG_SAMPLE_AVW_ALWAYS));
 
   FileReporter::Init(exports);
   UdpReporter::Init(exports);
