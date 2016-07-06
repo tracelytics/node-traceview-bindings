@@ -1,60 +1,87 @@
 var bindings = require('../')
 
 describe('context', function () {
-  it('should set tracing mode to never', function () {
-    bindings.Context.setTracingMode(bindings.TRACE_NEVER)
+  var context
+  var token = "1234567890abcdef1234567890abcdef"
+  var rate = bindings.MAX_SAMPLE_RATE
+  var flags = bindings.SAMPLE_START
+    | bindings.SAMPLE_THROUGH_ALWAYS
+    | bindings.SAMPLE_AVW_ALWAYS
+
+  it('should construct a context with layer and app token', function () {
+    context = new bindings.Context("test", token)
   })
-  it('should set tracing mode to always', function () {
-    bindings.Context.setTracingMode(bindings.TRACE_ALWAYS)
+  it('should support flags in context constructor', function () {
+    context = new bindings.Context("test", token, flags)
   })
-  it('should set tracing mode to through', function () {
-    bindings.Context.setTracingMode(bindings.TRACE_THROUGH)
+  it('should support sample rate in context constructor', function () {
+    context = new bindings.Context("test", token, flags, rate)
   })
-  it('should set tracing mode to an out-of-range input', function () {
-    try {
-      bindings.Context.setTracingMode(3)
-    } catch (e) {
-      if (e.message === 'Invalid tracing mode') {
-        return
+
+  it('should support trace mode string in place of flags', function () {
+    var modes = ['always','through','never']
+    modes.forEach(function (mode) {
+      var thrown = false
+      try {
+        new bindings.Context("test", token, mode)
+      } catch (e) {
+        thrown = true
       }
-    }
-
-    throw new Error('setTracingMode should fail on invalid inputs')
+      thrown.should.equal(false)
+    })
   })
-  it('should set tracing mode to an invalid input', function () {
-    try {
-      bindings.Context.setTracingMode('foo')
-    } catch (e) {
-      if (e.message === 'Tracing mode must be a number') {
-        return
+
+  it('should not set the app token to invalid types', function () {
+    var types = [null, undefined, 1, 'wrong length', new Date, [], {}]
+    types.forEach(function (type) {
+      var thrown = false
+      try {
+        new bindings.Context("test", type)
+      } catch (e) {
+        thrown = true
       }
-    }
-
-    throw new Error('setTracingMode should fail on invalid inputs')
+      thrown.should.equal(true)
+    })
   })
-
-  it('should set valid sample rate', function () {
-    bindings.Context.setDefaultSampleRate(bindings.MAX_SAMPLE_RATE / 10)
-  })
-  it('should set invalid sample rate', function () {
-    try {
-      bindings.Context.setDefaultSampleRate(bindings.MAX_SAMPLE_RATE + 1)
-    } catch (e) {
-      if (e.message === 'Sample rate out of range') {
-        return
+  it('should not set flags to invalid types', function () {
+    var types = [undefined, '', new Date, [], {}]
+    types.forEach(function (type) {
+      var thrown = false
+      try {
+        new bindings.Context("test", token, type)
+      } catch (e) {
+        thrown = true
       }
-    }
-
-    throw new Error('setDefaultSampleRate should fail on invalid inputs')
+      thrown.should.equal(true)
+    })
+  })
+  it('should not set sample rate to invalid types', function () {
+    var types = [undefined, '', new Date, [], {}]
+    types.forEach(function (type) {
+      var thrown = false
+      try {
+        new bindings.Context("test", token, flags, type)
+      } catch (e) {
+        thrown = true
+      }
+      thrown.should.equal(true)
+    })
   })
 
-  it('should check if a request should be sampled', function () {
-    bindings.Context.setTracingMode(bindings.TRACE_ALWAYS)
-    bindings.Context.setDefaultSampleRate(bindings.MAX_SAMPLE_RATE)
-    var check = bindings.Context.sampleRequest('a', 'b', 'c')
+  it('should sample', function () {
+    var check = context.shouldSample(
+      '1B00000000000000000000000000000000000000000000000000000000',
+      null,
+      'some url'
+    )
     check.should.be.an.instanceof(Buffer)
     check.length.should.be.above(0)
-    // TODO: Verify structural integrity of _SP data
+  })
+
+  it('should get the default app token', function () {
+    var token = bindings.Context.defaultAppToken
+    token.should.be.an.instanceof(String)
+    token.should.have.a.lengthOf(32)
   })
 
   it('should serialize context to string', function () {
@@ -107,30 +134,5 @@ describe('context', function () {
   it('should be valid when not empty', function () {
     var event = bindings.Context.startTrace()
     bindings.Context.isValid().should.equal(true)
-  })
-
-  it('should get the app token', function () {
-    var token = bindings.Context.appToken
-    token.should.be.an.instanceof(String)
-    token.should.have.a.lengthOf(32)
-  })
-
-  it('should set the app token', function () {
-    var token = '1234567890abcdef1234567890abcdef'
-    bindings.Context.appToken = token
-    bindings.Context.appToken.should.equal(token)
-  })
-
-  it('should not set the app token to invalid types', function () {
-    var types = [null, undefined, 1, 'wrong length', new Date, [], {}]
-    types.forEach(function (type) {
-      var thrown = false
-      try {
-        bindings.Context.appToken = type
-      } catch (e) {
-        thrown = true
-      }
-      thrown.should.equal(true)
-    })
   })
 })
