@@ -11,11 +11,9 @@ void SettingsContext::setSampleRate(int rate) {
 }
 
 void SettingsContext::setLayer(std::string name) {
-  changed = true;
   layer = name;
 }
 void SettingsContext::setLayer(const char* name) {
-  changed = true;
   layer = std::string(name);
 }
 
@@ -29,7 +27,7 @@ void SettingsContext::setAppToken(const char* name) {
 }
 
 void SettingsContext::regen() {
-  if (!changed) return;
+  if (!changed && settings_list.find(layer) != settings_list.end()) return;
   changed = false;
 
   int flags;
@@ -49,12 +47,13 @@ void SettingsContext::regen() {
       break;
   }
 
-  // Cleanup old settings
+  // CLeanup old settings
+  oboe_settings_ctx_t* settings = settings_list[layer];
   if (settings != NULL) {
     oboe_settings_ctx_destroy(settings);
   }
 
-  settings = oboe_settings_ctx_create(
+  settings_list[layer] = oboe_settings_ctx_create(
     layer.c_str(),
     appToken.c_str(),
     flags,
@@ -69,6 +68,7 @@ bool SettingsContext::sample(std::string& xtrace, std::string& url, std::string&
   char retbuf[OBOE_SAMPLE_PARAM_BUFFER_MAX];
   int retbuflen = OBOE_SAMPLE_PARAM_BUFFER_MAX;
 
+  oboe_settings_ctx_t* settings = settings_list[layer];
   if (oboe_should_trace(settings, retbuf, &retbuflen, xtrace.c_str(), url.c_str(), meta.c_str())) {
     traceData = std::string(retbuf, retbuflen);
     return true;

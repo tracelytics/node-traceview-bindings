@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <string>
+#include <map>
 
 #include <node.h>
 #include <nan.h>
@@ -13,7 +14,7 @@
 
 // Helper class for managing app token
 class SettingsContext {
-  oboe_settings_ctx_t* settings = nullptr;
+  std::map<std::string, oboe_settings_ctx_t*> settings_list;
   std::string traceData;
   std::string appToken;
   std::string layer;
