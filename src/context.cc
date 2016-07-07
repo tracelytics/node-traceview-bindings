@@ -17,10 +17,6 @@ NAN_SETTER(OboeContext::setAppToken) {
   }
 
   Nan::Utf8String utf8_value(value);
-  if (strlen(*utf8_value) != 32) {
-    return Nan::ThrowTypeError("App token must be a 32 characters long");
-  }
-
   SettingsContext::instance()->setAppToken(*utf8_value);
 
   info.GetReturnValue().Set(Nan::Undefined());
