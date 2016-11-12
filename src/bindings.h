@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <string>
+#include <map>
 
 #include <node.h>
 #include <nan.h>
@@ -10,6 +11,57 @@
 #include <v8.h>
 
 #include <oboe/oboe.h>
+
+// Helper class for managing app token
+class SettingsContext {
+  std::map<std::string, oboe_settings_ctx_t*> settings_list;
+  std::string traceData;
+  std::string appToken;
+  std::string layer;
+  int sampleRate;
+  int traceMode;
+  bool changed;
+
+  // Singleton
+  static SettingsContext* singleton;
+
+  // Constructor
+  SettingsContext(int mode, int rate)
+    : sampleRate(rate)
+    , traceMode(mode)
+    , changed(true)
+  {
+    appToken = oboe_get_apptoken();
+  };
+
+  void regen();
+
+public:
+  static SettingsContext* instance() {
+    if (!singleton) singleton = new SettingsContext(OBOE_TRACE_ALWAYS, -1);
+    return singleton;
+  }
+
+  void setTraceMode(int);
+  int getTraceMode() { return traceMode; };
+
+  void setSampleRate(int);
+  int getSampleRate() { return sampleRate; };
+
+  void setLayer(std::string);
+  void setLayer(const char*);
+  std::string& getLayer() { return layer; };
+
+  void setAppToken(std::string);
+  void setAppToken(const char*);
+  std::string& getAppToken() { return appToken; };
+
+  std::string& getTraceData() { return traceData; };
+
+  bool sample(std::string&, std::string&, std::string&);
+};
+
+SettingsContext* SettingsContext::singleton = 0;
 
 class Event;
 
@@ -58,6 +110,11 @@ class OboeContext {
   static NAN_METHOD(init);
   static NAN_METHOD(createEvent);
   static NAN_METHOD(startTrace);
+
+  static NAN_GETTER(getAppToken);
+  static NAN_SETTER(setAppToken);
+  static NAN_GETTER(getDefaultAppToken);
+  static NAN_SETTER(setDefaultAppToken);
 
   public:
     static void Init(v8::Local<v8::Object>);

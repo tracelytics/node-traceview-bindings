@@ -1,6 +1,6 @@
 var bindings = require('../')
 
-describe('addon.event', function () {
+describe('event', function () {
   var event
 
   it('should construct', function () {
@@ -9,6 +9,20 @@ describe('addon.event', function () {
 
   it('should add info', function () {
     event.addInfo('key', 'val')
+  })
+
+  it('should add buffer info', function () {
+    event.addInfo('key', new Buffer(""))
+  })
+
+  it('should not try to add non-buffer objects', function () {
+    var thrown = false
+    try {
+      event.addInfo('key', {})
+    } catch (e) {
+      thrown = true
+    }
+    thrown.should.equal(true)
   })
 
   it('should add edge', function () {

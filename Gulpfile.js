@@ -4,7 +4,7 @@ var spawn = require('child_process').spawn
 var build = require('./build')
 
 gulp.task('test', function () {
-  return gulp.src('test/*.test.js', {
+  return gulp.src('test/**/*.test.js', {
     read: false
   })
   .pipe(tester())

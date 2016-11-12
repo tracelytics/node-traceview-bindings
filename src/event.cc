@@ -69,9 +69,6 @@ NAN_METHOD(Event::addInfo) {
   if (!info[0]->IsString()) {
     return Nan::ThrowTypeError("Key must be a string");
   }
-  if (!info[1]->IsString() && !info[1]->IsNumber() && !info[1]->IsBoolean()) {
-    return Nan::ThrowTypeError("Value must be a boolean, string or number");
-  }
 
   // Unwrap event instance from V8
   Event* self = ObjectWrap::Unwrap<Event>(info.This());
@@ -97,17 +94,28 @@ NAN_METHOD(Event::addInfo) {
     status = oboe_event_add_info_double(event, *key, val);
 
   // Handle string values
-  } else {
+  } else if (info[1]->IsString()) {
     // Get value string from arguments
     Nan::Utf8String value(info[1]);
 
     // Detect if we should add as binary or a string
-    // TODO: Should probably use buffers for binary data...
     if (memchr(*value, '\0', value.length())) {
       status = oboe_event_add_info_binary(event, *key, *value, value.length());
     } else {
       status = oboe_event_add_info(event, *key, *value);
     }
+
+  // Handle buffers
+  } else if (node::Buffer::HasInstance(info[1])) {
+    Local<Object> buffer = info[1]->ToObject();
+    const char* buf = node::Buffer::Data(buffer);
+    size_t len = node::Buffer::Length(buffer);
+
+    status = oboe_event_add_info_binary(event, *key, buf, len);
+
+  // All other types are errors
+  } else {
+    return Nan::ThrowTypeError("Value type not supported");
   }
 
   if (status < 0) {

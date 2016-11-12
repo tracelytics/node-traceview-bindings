@@ -1,5 +1,27 @@
 #include "bindings.h"
 
+NAN_SETTER(OboeContext::setDefaultAppToken) {}
+NAN_GETTER(OboeContext::getDefaultAppToken) {
+  info.GetReturnValue().Set(Nan::New(oboe_get_apptoken()).ToLocalChecked());
+}
+
+NAN_GETTER(OboeContext::getAppToken) {
+  info.GetReturnValue().Set(Nan::New(
+    SettingsContext::instance()->getAppToken()
+  ).ToLocalChecked());
+}
+
+NAN_SETTER(OboeContext::setAppToken) {
+  if (!value->IsString()) {
+    return Nan::ThrowTypeError("App token must be a string");
+  }
+
+  Nan::Utf8String utf8_value(value);
+  SettingsContext::instance()->setAppToken(*utf8_value);
+
+  info.GetReturnValue().Set(Nan::Undefined());
+}
+
 /**
  * Set the tracing mode.
  *
@@ -22,7 +44,8 @@ NAN_METHOD(OboeContext::setTracingMode) {
     return Nan::ThrowRangeError("Invalid tracing mode");
   }
 
-  oboe_settings_cfg_tracing_mode_set(mode);
+  // Set trace mode on settings context
+  SettingsContext::instance()->setTraceMode(mode);
 }
 
 /**
@@ -49,7 +72,8 @@ NAN_METHOD(OboeContext::setDefaultSampleRate) {
     return Nan::ThrowRangeError("Sample rate out of range");
   }
 
-  oboe_settings_cfg_sample_rate_set(rate);
+  // Set trace mode on settings context
+  SettingsContext::instance()->setSampleRate(rate);
 }
 
 /**
@@ -66,6 +90,7 @@ NAN_METHOD(OboeContext::setDefaultSampleRate) {
  * @param layer Name of the layer being considered for tracing
  * @param in_xtrace Incoming X-Trace ID (NULL or empty string if not present)
  * @param in_tv_meta AppView Web ID from X-TV-Meta HTTP header or higher layer (NULL or empty string if not present).
+ * @param url URL or other identity string to sample with
  * @return Zero to not trace; otherwise return the sample rate used in the low order
  *         bytes 0 to 2 and the sample source in the higher-order byte 3.
  */
@@ -86,7 +111,7 @@ NAN_METHOD(OboeContext::sampleRequest) {
   layer_name = *Nan::Utf8String(info[0]);
 
   // If the second argument is present, it must be a string
-  if (info.Length() >= 2) {
+  if (info.Length() >= 2 && !info[1]->IsNull()) {
     if ( ! info[1]->IsString()) {
       return Nan::ThrowTypeError("X-Trace ID must be a string");
     }
@@ -94,30 +119,31 @@ NAN_METHOD(OboeContext::sampleRequest) {
   }
 
   // If the third argument is present, it must be a string
-  if (info.Length() >= 3) {
+  if (info.Length() >= 3 && !info[2]->IsNull()) {
     if ( ! info[2]->IsString()) {
       return Nan::ThrowTypeError("AppView Web ID must be a string");
     }
     in_tv_meta = *Nan::Utf8String(info[2]);
   }
 
-  int sample_rate = 0;
-  int sample_source = 0;
-  int rc = oboe_sample_layer(
-    layer_name.c_str(),
-    in_xtrace.c_str(),
-    in_tv_meta.c_str(),
-    &sample_rate,
-    &sample_source
+  SettingsContext* ctx = SettingsContext::instance();
+  ctx->setLayer(layer_name);
+
+  // If the URL argument is present, it must be a string
+  std::string url = std::string("");
+  if (info.Length() >= 4 && !info[3]->IsNull()) {
+    if ( ! info[3]->IsString()) {
+      return Nan::ThrowTypeError("URL/Identity must be a string");
+    }
+    url = *Nan::Utf8String(info[3]);
+  }
+
+  ctx->sample(in_xtrace, url, in_tv_meta);
+
+  std::string td = ctx->getTraceData();
+  info.GetReturnValue().Set(
+    Nan::CopyBuffer(td.data(), td.size()).ToLocalChecked()
   );
-
-  // Store rc, sample_source and sample_rate in an array
-  v8::Local<v8::Array> array = Nan::New<v8::Array>(2);
-  Nan::Set(array, 0, Nan::New(rc));
-  Nan::Set(array, 1, Nan::New(sample_source));
-  Nan::Set(array, 2, Nan::New(sample_rate));
-
-  info.GetReturnValue().Set(array);
 }
 
 NAN_METHOD(OboeContext::toString) {
@@ -199,6 +225,20 @@ void OboeContext::Init(v8::Local<v8::Object> module) {
   Nan::SetMethod(exports, "isValid", OboeContext::isValid);
   Nan::SetMethod(exports, "createEvent", OboeContext::createEvent);
   Nan::SetMethod(exports, "startTrace", OboeContext::startTrace);
+
+  // Provide appToken getter and setter for new liboboe
+  Nan::SetAccessor(
+    exports,
+    Nan::New("appToken").ToLocalChecked(),
+    OboeContext::getAppToken,
+    OboeContext::setAppToken
+  );
+  Nan::SetAccessor(
+    exports,
+    Nan::New("defaultAppToken").ToLocalChecked(),
+    OboeContext::getDefaultAppToken,
+    OboeContext::setDefaultAppToken
+  );
 
   Nan::Set(module, Nan::New("Context").ToLocalChecked(), exports);
 }

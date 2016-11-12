@@ -1,6 +1,6 @@
 var bindings = require('../')
 
-describe('addon.context', function () {
+describe('context', function () {
   it('should set tracing mode to never', function () {
     bindings.Context.setTracingMode(bindings.TRACE_NEVER)
   })
@@ -52,10 +52,9 @@ describe('addon.context', function () {
     bindings.Context.setTracingMode(bindings.TRACE_ALWAYS)
     bindings.Context.setDefaultSampleRate(bindings.MAX_SAMPLE_RATE)
     var check = bindings.Context.sampleRequest('a', 'b', 'c')
-    check.should.be.an.instanceof(Array)
-    check.should.have.property(0, 1)
-    check.should.have.property(1, 1)
-    check.should.have.property(2, bindings.MAX_SAMPLE_RATE)
+    check.should.be.an.instanceof(Buffer)
+    check.length.should.be.above(0)
+    // TODO: Verify structural integrity of _SP data
   })
 
   it('should serialize context to string', function () {
@@ -108,5 +107,30 @@ describe('addon.context', function () {
   it('should be valid when not empty', function () {
     var event = bindings.Context.startTrace()
     bindings.Context.isValid().should.equal(true)
+  })
+
+  it('should get the app token', function () {
+    var token = bindings.Context.appToken
+    token.should.be.an.instanceof(String)
+    token.should.have.a.lengthOf(32)
+  })
+
+  it('should set the app token', function () {
+    var token = '1234567890abcdef1234567890abcdef'
+    bindings.Context.appToken = token
+    bindings.Context.appToken.should.equal(token)
+  })
+
+  it('should not set the app token to invalid types', function () {
+    var types = [null, undefined, 1, 'wrong length', new Date, [], {}]
+    types.forEach(function (type) {
+      var thrown = false
+      try {
+        bindings.Context.appToken = type
+      } catch (e) {
+        thrown = true
+      }
+      thrown.should.equal(true)
+    })
   })
 })

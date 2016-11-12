@@ -1,21 +1,18 @@
-var helper = require('../../helper')
-var tv = require('../../..')
-var addon = tv.addon
+var addon = require('../../')
+var dgram = require('dgram')
 
-describe('addon.reporters.udp', function () {
+describe('reporters/udp', function () {
   var reporter
-  var emitter
+  var server
 
-  //
-  // Intercept tracelyzer messages for analysis
-  //
   before(function (done) {
-    emitter = helper.tracelyzer(done)
-    tv.sampleRate = tv.addon.MAX_SAMPLE_RATE
-    tv.traceMode = 'always'
+    server = dgram.createSocket('udp4')
+    server.on('listening', done)
+    server.bind()
   })
   after(function (done) {
-    emitter.close(done)
+    server.on('close', done)
+    server.close()
   })
 
   it('should construct', function () {
@@ -27,15 +24,15 @@ describe('addon.reporters.udp', function () {
   })
 
   it('should set port', function () {
-    reporter.port = emitter.port
+    var port = server.address().port
+    reporter.port = port
   })
 
   it('should report event', function (done) {
     var event = addon.Context.createEvent()
 
-    // Receive the message from the udp server and verify the id matches
-    emitter.once('message', function (msg) {
-      msg.should.have.property('X-Trace', event.toString())
+    // TODO: Test message is valid
+    server.once('message', function (msg) {
       done()
     })
 

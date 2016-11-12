@@ -63,7 +63,7 @@ void FileReporter::Init(v8::Local<v8::Object> exports) {
   // Prepare constructor template
   v8::Local<v8::FunctionTemplate> ctor = Nan::New<v8::FunctionTemplate>(New);
   ctor->InstanceTemplate()->SetInternalFieldCount(1);
-  ctor->SetClassName(Nan::New("UdpReporter").ToLocalChecked());
+  ctor->SetClassName(Nan::New("FileReporter").ToLocalChecked());
 
   // Prototype
   Nan::SetPrototypeMethod(ctor, "sendReport", FileReporter::sendReport);

@@ -1,6 +1,6 @@
 var bindings = require('../')
 
-describe('addon.metadata', function () {
+describe('metadata', function () {
   var metadata
   var string
 

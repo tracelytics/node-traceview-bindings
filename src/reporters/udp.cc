@@ -128,9 +128,24 @@ void UdpReporter::Init(v8::Local<v8::Object> exports) {
 
   // Assign host/port to change reporter target
   Local<ObjectTemplate> proto = ctor->PrototypeTemplate();
-  Nan::SetAccessor(proto, Nan::New("address").ToLocalChecked(), getAddress, setAddress);
-  Nan::SetAccessor(proto, Nan::New("host").ToLocalChecked(), getHost, setHost);
-  Nan::SetAccessor(proto, Nan::New("port").ToLocalChecked(), getPort, setPort);
+  Nan::SetAccessor(
+    proto,
+    Nan::New("address").ToLocalChecked(),
+    UdpReporter::getAddress,
+    UdpReporter::setAddress
+  );
+  Nan::SetAccessor(
+    proto,
+    Nan::New("host").ToLocalChecked(),
+    UdpReporter::getHost,
+    UdpReporter::setHost
+  );
+  Nan::SetAccessor(
+    proto,
+    Nan::New("port").ToLocalChecked(),
+    UdpReporter::getPort,
+    UdpReporter::setPort
+  );
 
   // Prototype
   Nan::SetPrototypeMethod(ctor, "sendReport", UdpReporter::sendReport);
